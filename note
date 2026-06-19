@@ -1,0 +1,19 @@
+creer classe annotation 1 : @Controller (dans framework)
+
+(dans test): TestController annote par @Controller
+
+
+But: fatatritsika oe iza daoly le Controller
+
+code: - executer au demarrage de l'appli web (Listener ou init) 
+      - au 1e appel du Frontservlet (methode init)
+      
+      Frontservlet: un seul attribut: list string listcontroller
+      init():parcourir toutes les classes dans le classpath: il y a de l'annotation? si oui: ajouter dans la liste
+
+
+annotation.Controller: soit tous, soit liste package
+
+web.xml de test: creer une variable ayant la valeur de l'annotation controller du framework
+
+dans classe Utilitaire: methode qui verifie si l'annotation existe ou pas: package, annotation,au niveau quoi(mehode,classe,...)
