@@ -1,8 +1,9 @@
-// package main.annotation;
+package main.annotation;
 
-// import java.lang.annotation.*;
+import java.lang.annotation.*;
 
-// @Target({ElementType.METHOD, ElementType.FIELD})
-// public @interface Controller {
-
-// }
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface Controller {
+    
+}
