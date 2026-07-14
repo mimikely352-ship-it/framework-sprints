@@ -40,6 +40,7 @@ refa tsy fatatra le url de mthrows exception de tenenina oe reto ny url misy
 si il choisit un url de mnethode et classe ny iany no afficheny: EmpController-> create
 NB: assurer l'unicite des url 
 
+--------------------------------------------------------------------------------------------------------------------------
 
 ### Sprint 3:
     meme url mais l'un peut etre POST et l'autre GET
@@ -51,5 +52,21 @@ NB: assurer l'unicite des url
         equals+hashcode
 test: methode 2mitovy + mitovy url => exception
 
+--------------------------------------------------------------------------------------------------------------------------
+
 ### Sprint 3bis:
     refa fatatra le methode de executena (invoke) sans creer l'instance (ao anaty processRequest)
+NB: mbola tsy no-pusheko ityyyy
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 5: (resaka vue)
+    - creer classe Modelandview: map(string,object),view  (OK)  
+    web.mxl: preffixe, suffixe  (OK)
+    suffixe: .jsp  (OK)
+    prefixe: webapp,web-inf/jsp,...(OK)
+    invoke les methodes, recuperer les valeurs de retour ppour savoir quel vue on utilise-> instance modelandview,
+                        recuperer les arguments
+                        recuperer le url et concatener avec le sufixe et prefixe
+
+    ex: ModelAndview liste()....
