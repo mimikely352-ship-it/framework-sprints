@@ -56,11 +56,10 @@ test: methode 2mitovy + mitovy url => exception
 
 ### Sprint 3bis:
     refa fatatra le methode de executena (invoke) sans creer l'instance (ao anaty processRequest)
-NB: mbola tsy no-pusheko ityyyy
 
 --------------------------------------------------------------------------------------------------------------------------
 
-### Sprint 5: (resaka vue)
+### Sprint 5: (resaka andefa donnee makany am vue)
     - creer classe Modelandview: map(string,object),view  (OK)  
     web.mxl: preffixe, suffixe  (OK)
     suffixe: .jsp  (OK)
@@ -70,3 +69,30 @@ NB: mbola tsy no-pusheko ityyyy
                         recuperer le url et concatener avec le sufixe et prefixe
 
     ex: ModelAndview liste()....
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 5bis: 
+declarwer listner spring dans web.xml du projet de test => mdemarrer le contener [OK]
+applicationContext(ato no misy ny bean retra2)
+ao am methode de test:
+ex: lister(applicatiocpontext cx){
+    cx.getbean()
+}
+- dans frontcontrollerlistner :
+    - ajout d'un variable static final SPRING_ROOT
+    - mettre valeur de SPRING_ROOT à "org.springframework.web.context.WebApplicationContext.ROOT"
+    - envoyer un attribut nommer springcontext qui contient la valeur de SPRING_ROOT dans le context :
+        servletContext.setAttribute("springContext", servletContext.getAttribute(SPRING_ROOT))
+- creation d'un classe Util :
+    - ajout de la fonction ststic boolean haveParameter(Method methode, Class<?> param) qui verifie si une methode à la classe param comme parametre
+- dans frontcontroller :
+    - recuperer le springcontext depuis le context et caster en WebApplicationContext
+    - changer l'invocation de la methode :
+        - verifier si la methode attend une parmetre WebApplication avec la fonction haveParam()
+            - si oui : 
+                - si springcontext == null : throw excepltion pas de springcontext
+                - invoker la methode en mettant en argument le springcontext :
+                    - result = (ModelAndView) method.invoke(obj,  springContext);
+            - sinon : invocation simple comme avant
+

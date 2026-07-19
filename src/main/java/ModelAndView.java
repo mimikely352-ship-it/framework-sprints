@@ -11,6 +11,10 @@ public class ModelAndView {
         this.view=view;
     }
 
+    public ModelAndView(String view){
+        this.view=view;
+    }
+
     public ModelAndView(){
     }
 
@@ -18,14 +22,14 @@ public class ModelAndView {
         return this.attribute;
     }
 
-    public String getview(){
+    public String getView(){
         return this.view;
     }
     public void setAttribute(HashMap<String,Object> attribute){
         this.attribute=attribute;
     }
 
-    public void setview(String view){
+    public void setView(String view){
         this.view=view;
     }
 }

@@ -1,9 +1,10 @@
 package main.java;
 
 import java.io.IOException;
-import java.lang.reflect.Method; // 🟢 Nécessaire pour invoquer la méthode
+import java.lang.reflect.Method;
 import java.util.ArrayList; 
 import java.util.List;
+import java.util.Map;
 import java.util.HashMap; 
 
 import jakarta.servlet.ServletException;
@@ -15,23 +16,25 @@ public class FrontControllerServlet extends HttpServlet {
 
     private List<String> listcontroller;
     private HashMap<URLMethod, Mapping> urlMappingStructure; 
+    private String prefix;
+    private String suffix;
 
     @Override
     public void init() throws ServletException {
         try {
             String packageToScan = this.getInitParameter("controllerParam");
-            String prefix=this.getInitParameter("viewPrefix");
-            String suffix=this.getInitParameter("viewSuffix");
+            this.prefix = this.getInitParameter("viewPrefix");
+            this.suffix = this.getInitParameter("viewSuffix");
             
             if (packageToScan == null || packageToScan.trim().isEmpty()) {
                 throw new ServletException("Le paramètre 'packageControllers' est manquant dans le web.xml");
             }
 
-            if(prefix==null){
-                prefix="/";
+            if (this.prefix == null) {
+                this.prefix = "/";
             }
-            if(suffix==null){
-                suffix=".jsp";
+            if (this.suffix == null) {
+                this.suffix = ".jsp";
             }
             this.listcontroller = new ArrayList<>();
             this.urlMappingStructure = Utilitaire.scanKeyMapping(packageToScan, "main.annotation.Controller", this.listcontroller);
@@ -73,13 +76,46 @@ public class FrontControllerServlet extends HttpServlet {
                 
                 Object instanceControleur = clazz.getDeclaredConstructor().newInstance();
                 
-                Method methodeAInvoquer = clazz.getDeclaredMethod(match.getMethod());
+                Object springContext = getServletContext().getAttribute("springContext");
                 
-                Object resultat = methodeAInvoquer.invoke(instanceControleur);
+                Method methodeAInvoquer = null;
+                for (Method m : clazz.getDeclaredMethods()) {
+                    if (m.getName().equals(match.getMethod())) {
+                        methodeAInvoquer = m;
+                        break;
+                    }
+                }
+
+                if (methodeAInvoquer == null) {
+                    throw new NoSuchMethodException("La methode " + match.getMethod() + " n'a pas ete trouvee.");
+                }
+
+                Object resultat;
+                Class<?> springContextClass = Class.forName("org.springframework.web.context.WebApplicationContext");
+
+                if (Util.haveParameter(methodeAInvoquer, springContextClass)) {
+                    if (springContext == null) {
+                        throw new ServletException("Pas de springcontext : Impossible d'injecter WebApplicationContext car il est introuvable.");
+                    }
+                    resultat = methodeAInvoquer.invoke(instanceControleur, springContext);
+                } else {
+                    resultat = methodeAInvoquer.invoke(instanceControleur);
+                }
                 
-                response.getWriter().println("<h2>Resultat de l'execution :</h2>");
-                response.getWriter().println("<p>" + resultat + "</p>");
+                if (resultat instanceof ModelAndView) {
+                    ModelAndView mv = (ModelAndView) resultat;
                 
+                    if (mv.getAttribute() != null) {
+                        for (Map.Entry<String, Object> entry : mv.getAttribute().entrySet()) {
+                            request.setAttribute(entry.getKey(), entry.getValue());
+                        }
+                    }
+                    
+                    String cheminCompletJsp = this.prefix + mv.getView() + this.suffix;               
+                    request.getRequestDispatcher(cheminCompletJsp).forward(request, response);
+                    return; 
+                }
+               
             } catch (Exception e) {
                 response.getWriter().println("<h2 style='color: red;'>Erreur lors de l'execution de la methode :</h2>");
                 response.getWriter().println("<pre>");
