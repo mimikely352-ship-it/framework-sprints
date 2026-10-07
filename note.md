@@ -90,3 +90,18 @@ frontservlet: teste l'existence de cet annotation si oui, averina le Json
 sinon, mande manao dispatcher  
 - return object (cote dev) ???
 si autre que string-> toJson (avadika Json)
+
+### Sprint 7: Binding (donnees des vues vers controller) anaty methode d'action
+(mbola tsy objet)
+ex: formulaire avec bouton -> miantso url associe a cette methode -> frontservlet
+                                                                        |
+                                                                        - verifie quelle methode est associee 
+                                                                        - verifie si les methodes ont des parametres (null par defaut)
+(servlet(getparamaternames))???
+
+                                                                        - on execute la methode
+                        testframework: ex: save(string nom, int age)
+
+
+### Sprint7-bis: binding Objet ou Objet + autre chose
+au lieu de save(string nom, int age) on fait save(Personne)
