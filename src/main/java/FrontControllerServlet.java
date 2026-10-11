@@ -1,6 +1,7 @@
 package main.java;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList; 
@@ -84,108 +85,150 @@ public class FrontControllerServlet extends HttpServlet {
                 for (int i = 0; i < param.length; i++) {
                     Class<?> type = param[i].getType();
                     String nomParametre = param[i].getName(); 
-                    Class<?> typeElement = String.class;
 
-                    if (type == int.class || type == Integer.class) {
-                        objet[i] = 0;
-                    } else if (type == double.class || type == Double.class) {
-                        objet[i] = 0.0;
-                    } else if (type == boolean.class || type == Boolean.class) {
-                        objet[i] = false;
-                    } else if (type == int[].class) {
-                        objet[i] = new int[0];
-                    } else if (type == String[].class) {
-                        objet[i] = new String[0];
-                    } else if (java.util.List.class.isAssignableFrom(type)) {
-                        objet[i] = new java.util.ArrayList<>();
-                        
-                        java.lang.reflect.Type genericType = param[i].getParameterizedType();
-                        if (genericType instanceof java.lang.reflect.ParameterizedType) {
-                            java.lang.reflect.ParameterizedType pt = (java.lang.reflect.ParameterizedType) genericType;
-                            java.lang.reflect.Type[] args = pt.getActualTypeArguments();
-                            if (args.length > 0 && args[0] instanceof Class) {
-                                typeElement = (Class<?>) args[0]; 
-                            }
-                        }                    
-                    } else {
-                        objet[i] = null;
-                    }
+                    boolean estTypeSimple = type.isPrimitive() || type == String.class || type == Integer.class || type == Double.class || type == Boolean.class;
+                    boolean estTypeComplexe = java.util.List.class.isAssignableFrom(type) || type == int[].class || type == String[].class;
 
-                    String[] values = null;
-                    String matchedKey = null;
-
-                    values = request.getParameterValues(nomParametre);
-                    if (values != null && values.length > 0) {
-                        matchedKey = nomParametre;
-                    } else {
-                        java.util.Enumeration<String> allParams = request.getParameterNames();
-                        while (allParams.hasMoreElements()) {
-                            String pName = allParams.nextElement();
-                            if (dejaPris.contains(pName)) {
-                                continue;
-                            }
-
-                            String[] tempValues = request.getParameterValues(pName);
-                            if (tempValues != null && tempValues.length > 0) {
-                                values = tempValues;
-                                matchedKey = pName;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (matchedKey != null) {
-                        dejaPris.add(matchedKey);
-                    }
-
-                    if (values == null || values.length == 0) continue;
-
-                    try {
-                        if (java.util.List.class.isAssignableFrom(type)) {
-                            java.util.List<Object> list = new java.util.ArrayList<>();
-                            for (String v : values) {
-                                if (v == null || v.trim().isEmpty()) continue;
+                    if (!estTypeComplexe && !estTypeSimple) {
+                        try {
+                            Object instance = type.getDeclaredConstructor().newInstance();
+                            Field[] fields = type.getDeclaredFields();
+                            
+                            for (Field field : fields) {
+                                field.setAccessible(true);
+                                String nomChamp = field.getName();
                                 
-                                if (typeElement == Integer.class || typeElement == int.class) {
-                                    list.add(Integer.parseInt(v));
-                                } else if (typeElement == Double.class || typeElement == double.class) {
-                                    list.add(Double.parseDouble(v));
-                                } else if (typeElement == Boolean.class || typeElement == boolean.class) {
-                                    list.add(Boolean.parseBoolean(v));
-                                } else {
-                                    list.add(v);
+                                String[] values = request.getParameterValues(nomParametre + "." + nomChamp);
+                                if (values == null || values.length == 0) {
+                                    values = request.getParameterValues(nomParametre + "_" + nomChamp);
+                                }
+                                if (values == null || values.length == 0) {
+                                    values = request.getParameterValues(nomChamp);
+                                }
+                                
+                                if (values == null || values.length == 0) continue;
+                                
+                                String val = values[0];
+                                Class<?> fieldType = field.getType();
+                                
+                                if (fieldType == int.class || fieldType == Integer.class) {
+                                    field.set(instance, Integer.parseInt(val));
+                                } else if (fieldType == double.class || fieldType == Double.class) {
+                                    field.set(instance, Double.parseDouble(val));
+                                } else if (fieldType == boolean.class || fieldType == Boolean.class) {
+                                    field.set(instance, Boolean.parseBoolean(val));
+                                } else if (fieldType == String.class) {
+                                    field.set(instance, val);
                                 }
                             }
-                            objet[i] = list;
-                        } 
-                        else if (type == int[].class) {
-                            int[] resultat = new int[values.length];
-                            for (int k = 0; k < values.length; k++) {
-                                resultat[k] = Integer.parseInt(values[k]);
-                            }
-                            objet[i] = resultat;
-                        } 
-                        else if (type == String[].class) {
-                            objet[i] = values;
-                        } 
-                        else {
-                            String val = values[0];
-                            if (!val.trim().isEmpty()) {
-                                if (type == int.class || type == Integer.class) {
-                                    objet[i] = Integer.parseInt(val);
-                                } else if (type == double.class || type == Double.class) {
-                                    objet[i] = Double.parseDouble(val);
-                                } else if (type == boolean.class || type == Boolean.class) {
-                                    objet[i] = Boolean.parseBoolean(val);
-                                } else if (type == String.class) {
-                                    objet[i] = val;
+                            objet[i] = instance; 
+
+                        } catch (Exception e) {
+                            objet[i] = null;
+                        }
+                    } 
+                
+                    else {
+                        Class<?> typeElement = String.class;
+
+                        if (type == int.class || type == Integer.class) {
+                            objet[i] = 0;
+                        } else if (type == double.class || type == Double.class) {
+                            objet[i] = 0.0;
+                        } else if (type == boolean.class || type == Boolean.class) {
+                            objet[i] = false;
+                        } else if (type == int[].class) {
+                            objet[i] = new int[0];
+                        } else if (type == String[].class) {
+                            objet[i] = new String[0];
+                        } else if (java.util.List.class.isAssignableFrom(type)) {
+                            objet[i] = new java.util.ArrayList<>();
+                            
+                            java.lang.reflect.Type genericType = param[i].getParameterizedType();
+                            if (genericType instanceof java.lang.reflect.ParameterizedType) {
+                                java.lang.reflect.ParameterizedType pt = (java.lang.reflect.ParameterizedType) genericType;
+                                java.lang.reflect.Type[] args = pt.getActualTypeArguments();
+                                if (args.length > 0 && args[0] instanceof Class) {
+                                    typeElement = (Class<?>) args[0]; 
+                                }
+                            }                    
+                        } else {
+                            objet[i] = null;
+                        }
+
+                        String[] values = null;
+                        String matchedKey = null;
+
+                        values = request.getParameterValues(nomParametre);
+                        if (values != null && values.length > 0) {
+                            matchedKey = nomParametre;
+                        } else {
+                            java.util.Enumeration<String> allParams = request.getParameterNames();
+                            while (allParams.hasMoreElements()) {
+                                String pName = allParams.nextElement();
+                                if (dejaPris.contains(pName)) continue;
+
+                                String[] tempValues = request.getParameterValues(pName);
+                                if (tempValues != null && tempValues.length > 0) {
+                                    values = tempValues;
+                                    matchedKey = pName;
+                                    break;
                                 }
                             }
                         }
-                    } catch (Exception e) {
+
+                        if (matchedKey != null) {
+                            dejaPris.add(matchedKey);
+                        }
+
+                        if (values != null && values.length > 0) {
+                            try {
+                                if (java.util.List.class.isAssignableFrom(type)) {
+                                    java.util.List<Object> list = new java.util.ArrayList<>();
+                                    for (String v : values) {
+                                        if (v == null || v.trim().isEmpty()) continue;
+                                        
+                                        if (typeElement == Integer.class || typeElement == int.class) {
+                                            list.add(Integer.parseInt(v));
+                                        } else if (typeElement == Double.class || typeElement == double.class) {
+                                            list.add(Double.parseDouble(v));
+                                        } else if (typeElement == Boolean.class || typeElement == boolean.class) {
+                                            list.add(Boolean.parseBoolean(v));
+                                        } else {
+                                            list.add(v);
+                                        }
+                                    }
+                                    objet[i] = list;
+                                } 
+                                else if (type == int[].class) {
+                                    int[] resultat = new int[values.length];
+                                    for (int k = 0; k < values.length; k++) {
+                                        resultat[k] = Integer.parseInt(values[k]);
+                                    }
+                                    objet[i] = resultat;
+                                } 
+                                else if (type == String[].class) {
+                                    objet[i] = values;
+                                } 
+                                else {
+                                    String val = values[0];
+                                    if (!val.trim().isEmpty()) {
+                                        if (type == int.class || type == Integer.class) {
+                                            objet[i] = Integer.parseInt(val);
+                                        } else if (type == double.class || type == Double.class) {
+                                            objet[i] = Double.parseDouble(val);
+                                        } else if (type == boolean.class || type == Boolean.class) {
+                                            objet[i] = Boolean.parseBoolean(val);
+                                        } else if (type == String.class) {
+                                            objet[i] = val;
+                                        }
+                                    }
+                                }
+                            } catch (Exception ignored) {}
+                        }
                     }
                 }
-
+                
                 Object resultat = methodeAInvoquer.invoke(instanceControleur, objet);
 
                 if (methodeAInvoquer.isAnnotationPresent(main.annotation.WebApi.class)) {
