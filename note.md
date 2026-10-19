@@ -1,0 +1,119 @@
+### Sprint 0:
+creer classe annotation 1 : @Controller (dans framework)
+
+(dans test): TestController annote par @Controller
+
+### Sprint 1:
+But: fatatritsika oe iza daoly le Controller
+
+code: - executer au demarrage de l'appli web (Listener ou init) 
+      - au 1e appel du Frontservlet (methode init)
+      
+      Frontservlet: un seul attribut: list string listcontroller
+      init():parcourir toutes les classes dans le classpath: il y a de l'annotation? si oui: ajouter dans la liste
+
+
+annotation.Controller: soit tous, soit liste package
+
+web.xml de test: creer une variable ayant la valeur de l'annotation controller du framework
+
+dans classe Utilitaire: methode qui verifie si l'annotation existe ou pas: package, annotation,au niveau quoi(mehode,classe,...)
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 2:
+But: rehefa ity url ity no antsoina de ity methode ity no antsoina (sans executer pour l'instant)
+ex: @Controller
+    EmpController 
+
+    @UrlMapping("/emp/list")
+    liste(){
+
+    }
+
+cree annotation methode mila variable 
+liste de url: Classe-> methode
+de la forme:ex: /emp/list     EmpController-> liste
+
+                /emp/new      EmpController-> create 
+
+refa tsy fatatra le url de mthrows exception de tenenina oe reto ny url misy
+si il choisit un url de mnethode et classe ny iany no afficheny: EmpController-> create
+NB: assurer l'unicite des url 
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 3:
+    meme url mais l'un peut etre POST et l'autre GET
+    ex: @urlmapping("/test) - GET
+        @urlmapping("/test) - POST
+
+        creer classe URLMethod : url,methode GET/POST
+        amboarina le map map(URLMethod, Mapping)
+        equals+hashcode
+test: methode 2mitovy + mitovy url => exception
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 3bis:
+    refa fatatra le methode de executena (invoke) sans creer l'instance (ao anaty processRequest)
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 5: (resaka andefa donnee makany am vue)
+    - creer classe Modelandview: map(string,object),view  (OK)  
+    web.mxl: preffixe, suffixe  (OK)
+    suffixe: .jsp  (OK)
+    prefixe: webapp,web-inf/jsp,...(OK)
+    invoke les methodes, recuperer les valeurs de retour ppour savoir quel vue on utilise-> instance modelandview,
+                        recuperer les arguments
+                        recuperer le url et concatener avec le sufixe et prefixe
+
+    ex: ModelAndview liste()....
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 5bis: 
+declarer listner spring dans web.xml du projet de test => mdemarrer le contener [OK]
+applicationContext(ato no misy ny bean retra2)
+ao am methode de test:
+ex: lister(applicatiocpontext cx){
+    cx.getbean()
+}
+
+### Sprint 6: WEB API
+Obj: tsy mande any am vue le url associe amle methode fa mamerina Json
+(Tsisy requestDispatcher)
+
+cote framework: manampy annotation apetaka am methode (@WebRest) tsy mande am vue fa mamerina Json
+
+frontservlet: teste l'existence de cet annotation si oui, averina le Json
+sinon, mande manao dispatcher  
+- return object (cote dev) ???
+si autre que string-> toJson (avadika Json)
+
+### Sprint 7: Binding (donnees des vues vers controller) anaty methode d'action
+(mbola tsy objet)
+ex: formulaire avec bouton -> miantso url associe a cette methode -> frontservlet
+                                                                        |
+                                                                        - verifie quelle methode est associee 
+                                                                        - verifie si les methodes ont des parametres (null par defaut)
+(servlet(getparamaternames))???
+
+                                                                        - on execute la methode
+                        testframework: ex: save(string nom, int age)
+
+
+### Sprint7-bis: binding Objet ou Objet + autre chose
+au lieu de save(string nom, int age) on fait save(Personne)
+
+
+### Sprint 8: Upload de fichier                                                                                                 
+upload: regarder s'il y a type="file" dans le formulaire 
+s'il y a soit: a stocker dans la base soit a stocker dans un serveur
+formulaire rattacher a une methode d'un controller 
+on fait en map et en objet(mcreer classetsika ex: MapFile(filename,extension,tableau de bytes))
+
+
+### Sprint 9: session
+atao ze ahatonga ny session de l'utilisateur dans le controller developper (sans autorisation)
