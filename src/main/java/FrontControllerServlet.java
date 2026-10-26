@@ -10,7 +10,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList; 
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap; 
+import java.util.HashMap;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -18,6 +18,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Part;
 
 @WebServlet (name="FrontControllerServlet",urlPatterns = "/")
@@ -35,43 +36,43 @@ public class FrontControllerServlet extends HttpServlet {
     private String dossierUpload;
 
     @Override
-public void init() throws ServletException {
-    try {
-        String packageToScan = this.getInitParameter("controllerParam");
-        this.prefix = this.getInitParameter("viewPrefix");
-        this.suffix = this.getInitParameter("viewSuffix");
-        
-        String nomDossier = getServletContext().getInitParameter("dossierUpload");
-        if (nomDossier != null) {
-            String projectRoot = System.getProperty("user.dir");
-            Path cheminDossier = Paths.get(projectRoot, nomDossier);
-            this.dossierUpload = cheminDossier.toString();
+    public void init() throws ServletException {
+        try {
+            String packageToScan = this.getInitParameter("controllerParam");
+            this.prefix = this.getInitParameter("viewPrefix");
+            this.suffix = this.getInitParameter("viewSuffix");
             
-            java.io.File dossier = new java.io.File(this.dossierUpload);
-            if (!dossier.exists()) {
-                dossier.mkdirs();
+            String nomDossier = getServletContext().getInitParameter("dossierUpload");
+            if (nomDossier != null) {
+                String projectRoot = System.getProperty("user.dir");
+                Path cheminDossier = Paths.get(projectRoot, nomDossier);
+                this.dossierUpload = cheminDossier.toString();
+                
+                java.io.File dossier = new java.io.File(this.dossierUpload);
+                if (!dossier.exists()) {
+                    dossier.mkdirs();
+                }
             }
-        }
 
-        if (packageToScan == null || packageToScan.trim().isEmpty()) {
-            throw new ServletException("Le paramètre 'controllerParam' est manquant dans le web.xml");
-        }
+            if (packageToScan == null || packageToScan.trim().isEmpty()) {
+                throw new ServletException("Le paramètre 'controllerParam' est manquant dans le web.xml");
+            }
 
-        if (this.prefix == null) {
-            this.prefix = "/";
+            if (this.prefix == null) {
+                this.prefix = "/";
+            }
+            if (this.suffix == null) {
+                this.suffix = ".jsp";
+            }
+            this.listcontroller = new ArrayList<>();
+            this.urlMappingStructure = Utilitaire.scanKeyMapping(packageToScan, "main.annotation.Controller", this.listcontroller);
+            
+            System.out.println("Scan termine. Controleurs charges : " + listcontroller);
+            
+        } catch (Exception e) {
+            throw new ServletException("Échec de l'initialisation du FrontController", e);
         }
-        if (this.suffix == null) {
-            this.suffix = ".jsp";
-        }
-        this.listcontroller = new ArrayList<>();
-        this.urlMappingStructure = Utilitaire.scanKeyMapping(packageToScan, "main.annotation.Controller", this.listcontroller);
-        
-        System.out.println("Scan termine. Controleurs charges : " + listcontroller);
-        
-    } catch (Exception e) {
-        throw new ServletException("Échec de l'initialisation du FrontController", e);
     }
-}
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) 
     throws ServletException, IOException {
@@ -106,6 +107,8 @@ public void init() throws ServletException {
                 Parameter[] param = methodeAInvoquer.getParameters();
                 Object[] objet = new Object[param.length];
                 List<String> dejaPris = new java.util.ArrayList<>();
+                
+                MaSession sessionArgument = null;
 
                 for (int i = 0; i < param.length; i++) {
                     Class<?> type = param[i].getType();
@@ -152,6 +155,16 @@ public void init() throws ServletException {
                             objet[i] = null;
                         }
                         continue;
+                    }
+
+                    if (type == MaSession.class) {
+                        try {
+                            sessionArgument = MaSession.from(request.getSession(true));
+                            objet[i] = sessionArgument;
+                        } catch (Exception e) {
+                            objet[i] = null;
+                        }
+                        continue; 
                     }
 
                     boolean estTypeSimple = type.isPrimitive() || type == String.class || type == Integer.class || type == Double.class || type == Boolean.class;
@@ -298,6 +311,15 @@ public void init() throws ServletException {
                 }
                 
                 Object resultat = methodeAInvoquer.invoke(instanceControleur, objet);
+
+                if (sessionArgument != null) {
+                    try {
+                        HttpSession nativeSession = request.getSession(false);
+                        if (nativeSession != null) {
+                            sessionArgument.flushTo(nativeSession);
+                        }
+                    } catch (Exception ignored) {}
+                }
 
                 if (methodeAInvoquer.isAnnotationPresent(main.annotation.WebApi.class)) {
                     response.setContentType("application/json; charset=UTF-8");

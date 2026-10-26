@@ -117,3 +117,26 @@ on fait en map et en objet(mcreer classetsika ex: MapFile(filename,extension,tab
 
 ### Sprint 9: session
 atao ze ahatonga ny session de l'utilisateur dans le controller developper (sans autorisation)
+Manamboatra classe MySession (Map(String,Object))+methode ajout,suppr,... 
+de refa maita aniny ny controller de injectena (creer un objet)
+
+cote framework: au traitement: rah misy type Session: creer une instance ...
+boucle le httpsSession pour remplir le Map
+BUT: Tsy iverimberina be le httpsession
+
+Manao Map iray mipetraka any am context de ny identifiant(session id) et valeur....???
+- Récupérer son sessionId.
+- Aller chercher ou créer son objet MySession dans la Map du contexte.
+- L'injecter dans la méthode du contrôleur par réflexion.
+
+
+### Sprint 10; 
+misy methode d'action(ao am controller), tenenina oe tsy maintsy connecter(authentifier le olona) vo afaka miexecute azy
+- annotation iray(auth)
+qlq part ity le anarana variable verifier-na (anaty web.xml) (alaina in1 iany, azo apetraka any am context)
+
+
+
+### Sprint 10-bis: connecter+ role specifique(1 ou plus)
+ex: connecte+role prof
+    connecte+ role prof et directeur
