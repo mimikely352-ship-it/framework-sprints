@@ -1,0 +1,170 @@
+### Sprint 0:
+creer classe annotation 1 : @Controller (dans framework)
+
+(dans test): TestController annote par @Controller
+
+### Sprint 1:
+But: fatatritsika oe iza daoly le Controller
+
+code: - executer au demarrage de l'appli web (Listener ou init) 
+      - au 1e appel du Frontservlet (methode init)
+      
+      Frontservlet: un seul attribut: list string listcontroller
+      init():parcourir toutes les classes dans le classpath: il y a de l'annotation? si oui: ajouter dans la liste
+
+
+annotation.Controller: soit tous, soit liste package
+
+web.xml de test: creer une variable ayant la valeur de l'annotation controller du framework
+
+dans classe Utilitaire: methode qui verifie si l'annotation existe ou pas: package, annotation,au niveau quoi(mehode,classe,...)
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 2:
+But: rehefa ity url ity no antsoina de ity methode ity no antsoina (sans executer pour l'instant)
+ex: @Controller
+    EmpController 
+
+    @UrlMapping("/emp/list")
+    liste(){
+
+    }
+
+cree annotation methode mila variable 
+liste de url: Classe-> methode
+de la forme:ex: /emp/list     EmpController-> liste
+
+                /emp/new      EmpController-> create 
+
+refa tsy fatatra le url de mthrows exception de tenenina oe reto ny url misy
+si il choisit un url de mnethode et classe ny iany no afficheny: EmpController-> create
+NB: assurer l'unicite des url 
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 3:
+    meme url mais l'un peut etre POST et l'autre GET
+    ex: @urlmapping("/test) - GET
+        @urlmapping("/test) - POST
+
+        creer classe URLMethod : url,methode GET/POST
+        amboarina le map map(URLMethod, Mapping)
+        equals+hashcode
+test: methode 2mitovy + mitovy url => exception
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 3bis:
+    refa fatatra le methode de executena (invoke) sans creer l'instance (ao anaty processRequest)
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 5: (resaka andefa donnee makany am vue)
+    - creer classe Modelandview: map(string,object),view  (OK)  
+    web.mxl: preffixe, suffixe  (OK)
+    suffixe: .jsp  (OK)
+    prefixe: webapp,web-inf/jsp,...(OK)
+    invoke les methodes, recuperer les valeurs de retour ppour savoir quel vue on utilise-> instance modelandview,
+                        recuperer les arguments
+                        recuperer le url et concatener avec le sufixe et prefixe
+
+    ex: ModelAndview liste()....
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### Sprint 5bis: 
+declarer listner spring dans web.xml du projet de test => mdemarrer le contener [OK]
+applicationContext(ato no misy ny bean retra2)
+ao am methode de test:
+ex: lister(applicatiocpontext cx){
+    cx.getbean()
+}
+
+### Sprint 6: WEB API
+Obj: tsy mande any am vue le url associe amle methode fa mamerina Json
+(Tsisy requestDispatcher)
+
+cote framework: manampy annotation apetaka am methode (@WebRest) tsy mande am vue fa mamerina Json
+
+frontservlet: teste l'existence de cet annotation si oui, averina le Json
+sinon, mande manao dispatcher  
+- return object (cote dev) ???
+si autre que string-> toJson (avadika Json)
+
+### Sprint 7: Binding (donnees des vues vers controller) anaty methode d'action
+(mbola tsy objet)
+ex: formulaire avec bouton -> miantso url associe a cette methode -> frontservlet
+                                                                        |
+                                                                        - verifie quelle methode est associee 
+                                                                        - verifie si les methodes ont des parametres (null par defaut)
+(servlet(getparamaternames))???
+
+                                                                        - on execute la methode
+                        testframework: ex: save(string nom, int age)
+
+
+### Sprint7-bis: binding Objet ou Objet + autre chose
+au lieu de save(string nom, int age) on fait save(Personne)
+
+
+### Sprint 8: Upload de fichier                                                                                                 
+upload: regarder s'il y a type="file" dans le formulaire 
+s'il y a soit: a stocker dans la base soit a stocker dans un serveur
+formulaire rattacher a une methode d'un controller 
+on fait en map et en objet(mcreer classetsika ex: MapFile(filename,extension,tableau de bytes))
+
+
+### Sprint 9: session
+atao ze ahatonga ny session de l'utilisateur dans le controller developper (sans autorisation)
+Manamboatra classe MySession (Map(String,Object))+methode ajout,suppr,... 
+de refa maita aniny ny controller de injectena (creer un objet)
+
+cote framework: au traitement: rah misy type Session: creer une instance ...
+boucle le httpsSession pour remplir le Map
+BUT: Tsy iverimberina be le httpsession
+
+Manao Map iray mipetraka any am context de ny identifiant(session id) et valeur....???
+- Récupérer son sessionId.
+- Aller chercher ou créer son objet MySession dans la Map du contexte.
+- L'injecter dans la méthode du contrôleur par réflexion.
+
+
+### Sprint 10; 
+misy methode d'action(ao am controller), tenenina oe tsy maintsy connecter(authentifier le olona) vo afaka miexecute azy
+- annotation iray(auth)
+qlq part ity le anarana variable verifier-na (anaty web.xml) (alaina in1 iany, azo apetraka any am context)
+
+- Création de l'annotation Auth :
+  - Applicable au niveau de la classe (TYPE) et de la méthode (METHOD).
+  - Ajout de l'attribut role avec une valeur par défaut "".
+  - Si le rôle est vide, seule l'authentification est nécessaire.
+  - Si un rôle est précisé, l'utilisateur doit posséder ce rôle pour accéder à la ressource.
+- Gestion des erreurs d'accès dans ResponseHelper :
+  - Ajout de la fonction handleUnauthorized pour gérer les erreurs d'authentification (HTTP 401) :
+    - Session inexistante ou utilisateur non authentifié.
+  - Ajout de la fonction handleForbidden pour gérer les erreurs d'autorisation (HTTP 403) :
+    - Utilisateur authentifié, mais ne possédant pas le rôle requis.
+- Gestion des réponses selon le type de requête :
+  - Réponse JSON pour les requêtes API.
+  - Réponse HTML pour les pages web.
+- Configuration du nom de l'attribut de rôle de session :
+  - Récupération du nom de la variable contenant le rôle de l'utilisateur depuis le web.xml dans FrontControllerListener.
+  - Stockage de cette configuration dans le ServletContext pour la rendre accessible au FrontController.
+- Vérification des autorisations dans FrontController :
+  - Création de la fonction checkAuthorization pour vérifier les accès avant l'invocation de la méthode du contrôleur :
+    - Récupération de l'annotation Auth sur la méthode, puis sur la classe si elle est absente.
+    - Priorité à l'annotation de la méthode par rapport à celle de la classe.
+    - Vérification de l'existence de la session et de l'attribut contenant le rôle de l'utilisateur.
+    - Si le rôle requis est vide, autorisation de l'accès après authentification.
+    - Si un rôle est requis, vérification de sa présence dans l'attribut de session, qui peut contenir un rôle unique (String) ou plusieurs rôles (Collection).
+    - Appel de handleUnauthorized si l'utilisateur n'est pas authentifié.
+    - Appel de handleForbidden si l'utilisateur est authentifié, mais ne possède pas le rôle requis.
+  - Arrêt du traitement de la requête en cas de refus d'accès.
+
+### Sprint 10-bis: connecter+ role specifique(1 ou plus)
+ex: connecte+role prof
+    connecte+ role prof et directeur
+qlq part ity le anarana variable verifier-na (anaty web.xml) (alaina in1 iany, azo apetraka any am context)
+ato anatinito variable ito no asiana anle role
+refa metgode d'action ka misy role annotation, de lasa mijery oe misy anito variable ito ve le parametre
