@@ -20,6 +20,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Part;
+import main.annotation.Auth;
+import main.annotation.WebApi;
 
 @WebServlet (name="FrontControllerServlet",urlPatterns = "/")
 @MultipartConfig (
@@ -34,6 +36,9 @@ public class FrontControllerServlet extends HttpServlet {
     private String prefix;
     private String suffix;
     private String dossierUpload;
+    private String authSessionKey;
+    private String authRoleKey;
+    private Map<String, Object> controllerInstances = new HashMap<>();
 
     @Override
     public void init() throws ServletException {
@@ -41,7 +46,9 @@ public class FrontControllerServlet extends HttpServlet {
             String packageToScan = this.getInitParameter("controllerParam");
             this.prefix = this.getInitParameter("viewPrefix");
             this.suffix = this.getInitParameter("viewSuffix");
-            
+            this.authSessionKey = this.getInitParameter("authSessionKey");
+            this.authRoleKey = this.getInitParameter("authRoleKey");
+
             String nomDossier = getServletContext().getInitParameter("dossierUpload");
             if (nomDossier != null) {
                 String projectRoot = System.getProperty("user.dir");
@@ -64,15 +71,103 @@ public class FrontControllerServlet extends HttpServlet {
             if (this.suffix == null) {
                 this.suffix = ".jsp";
             }
+
+            if (this.authSessionKey == null) {
+                this.authSessionKey = "user";
+            }
+            getServletContext().setAttribute("authSessionKey", authSessionKey);
+
+            
+            if (this.authRoleKey == null) {
+                this.authRoleKey = "role";
+            }
+            getServletContext().setAttribute("authRoleKey", authRoleKey);
+
             this.listcontroller = new ArrayList<>();
             this.urlMappingStructure = Utilitaire.scanKeyMapping(packageToScan, "main.annotation.Controller", this.listcontroller);
             
+            for (String controllerNames : listcontroller) {
+                try {
+                    Class<?> clazz = Class.forName("main.java.Controller." + controllerNames);
+                    Object instance = clazz.getDeclaredConstructor().newInstance();
+                    controllerInstances.put(controllerNames, instance);
+                } catch (Exception e) {
+                    System.err.println("Impossible d'instancier le contrôleur : " + controllerNames);
+                    e.printStackTrace();
+                }
+            }
+
+            getServletContext().setAttribute("controllerInstances", controllerInstances);
+
             System.out.println("Scan termine. Controleurs charges : " + listcontroller);
             
         } catch (Exception e) {
             throw new ServletException("Échec de l'initialisation du FrontController", e);
         }
+
+        
     }
+    
+    public boolean checkAuthorization(HttpServletRequest request, HttpServletResponse response, Method method, Object controllerInstance, boolean isApi) throws IOException {
+    Auth auth = method.getAnnotation(Auth.class);
+    if (auth == null) {
+        auth = controllerInstance.getClass().getAnnotation(Auth.class);
+    }
+
+    if (auth == null) {
+        return true;
+    }
+
+    HttpSession session = request.getSession(false);
+    String authSessionKey = (String) getServletContext().getAttribute("authSessionKey");
+    String authRoleKey = (String) getServletContext().getAttribute("authRoleKey");
+
+    if (session == null || session.getAttribute(authSessionKey) == null) {
+        ResponseHelper.handleUnauthorized(request, response, isApi);
+        return false;
+    }
+
+    String[] requiredRoles = auth.role();
+    if (requiredRoles != null && requiredRoles.length > 0 && !requiredRoles[0].isEmpty()) {
+        Object userRolesObj = session.getAttribute(authRoleKey);
+        boolean hasRole = false;
+
+        if (userRolesObj != null) {
+            List<String> sessionRoles = new ArrayList<>();
+            if (userRolesObj instanceof String) {
+                sessionRoles.add(((String) userRolesObj).trim());
+            } else if (userRolesObj instanceof String[]) {
+                for (String r : (String[]) userRolesObj) {
+                    if (r != null) sessionRoles.add(r.trim());
+                }
+            } else if (userRolesObj instanceof java.util.Collection) {
+                for (Object r : (java.util.Collection<?>) userRolesObj) {
+                    if (r != null) sessionRoles.add(r.toString().trim());
+                }
+            }
+
+            for (String reqRole : requiredRoles) {
+                for (String sRole : sessionRoles) {
+                    if (sRole.equalsIgnoreCase(reqRole.trim())) {
+                        hasRole = true;
+                        break;
+                    }
+                }
+                if (hasRole) {
+                    break;
+                }
+            }
+        }
+
+        if (!hasRole) {
+            ResponseHelper.handleForbidden(request, response, isApi);
+            return false;
+        }
+    }
+
+        return true;
+    }
+
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) 
     throws ServletException, IOException {
@@ -88,12 +183,14 @@ public class FrontControllerServlet extends HttpServlet {
 
         if (match != null) {
             try {
-                String fullClassName = "main.java.Controller." + match.getClassName();
-                Class<?> clazz = Class.forName(fullClassName);
-                Object instanceControleur = clazz.getDeclaredConstructor().newInstance();
+                Object instanceControleur = controllerInstances.get(match.getClassName());
+        
+                if (instanceControleur == null) {
+                    throw new Exception("Contrôleur introuvable en mémoire pour : " + match.getClassName());
+                }
                 
                 Method methodeAInvoquer = null;
-                for (Method m : clazz.getDeclaredMethods()) {
+                for (Method m : instanceControleur.getClass().getDeclaredMethods()) {
                     if (m.getName().equals(match.getMethod())) {
                         methodeAInvoquer = m;
                         break;
@@ -101,7 +198,13 @@ public class FrontControllerServlet extends HttpServlet {
                 }
 
                 if (methodeAInvoquer == null) {
-                    throw new NoSuchMethodException("Méthode " + match.getMethod() + " introuvable dans " + fullClassName);
+                    throw new NoSuchMethodException("Méthode " + match.getMethod() + " introuvable dans le contrôleur " + match.getClassName());
+                }
+
+                boolean isApi = methodeAInvoquer.isAnnotationPresent(WebApi.class);
+
+                if (!checkAuthorization(request, response, methodeAInvoquer, instanceControleur, isApi)) {
+                    return;
                 }
 
                 Parameter[] param = methodeAInvoquer.getParameters();
@@ -310,6 +413,21 @@ public class FrontControllerServlet extends HttpServlet {
                     }
                 }
                 
+                if (methodeAInvoquer.isAnnotationPresent(main.annotation.Auth.class)) {
+                    HttpSession sessionNat = request.getSession(false);
+                    boolean estConnecte = false;
+                    
+                    if (sessionNat != null && sessionNat.getAttribute(this.authSessionKey) != null) {
+                        estConnecte = true;
+                    }
+
+                    if (!estConnecte) {
+                        response.setContentType("text/html;charset=UTF-8");
+                        response.getWriter().println("<h3 style='color: red;'>Accès refusé : Vous devez être connecté (attribut '" + this.authSessionKey + "' manquant en session).</h3>");
+                        return; 
+                    }
+                }
+
                 Object resultat = methodeAInvoquer.invoke(instanceControleur, objet);
 
                 if (sessionArgument != null) {
@@ -381,7 +499,11 @@ public class FrontControllerServlet extends HttpServlet {
             }
             response.getWriter().println("</body></html>");
         }
+
+        
     }
+
+   
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 

@@ -135,8 +135,36 @@ misy methode d'action(ao am controller), tenenina oe tsy maintsy connecter(authe
 - annotation iray(auth)
 qlq part ity le anarana variable verifier-na (anaty web.xml) (alaina in1 iany, azo apetraka any am context)
 
-
+- Création de l'annotation Auth :
+  - Applicable au niveau de la classe (TYPE) et de la méthode (METHOD).
+  - Ajout de l'attribut role avec une valeur par défaut "".
+  - Si le rôle est vide, seule l'authentification est nécessaire.
+  - Si un rôle est précisé, l'utilisateur doit posséder ce rôle pour accéder à la ressource.
+- Gestion des erreurs d'accès dans ResponseHelper :
+  - Ajout de la fonction handleUnauthorized pour gérer les erreurs d'authentification (HTTP 401) :
+    - Session inexistante ou utilisateur non authentifié.
+  - Ajout de la fonction handleForbidden pour gérer les erreurs d'autorisation (HTTP 403) :
+    - Utilisateur authentifié, mais ne possédant pas le rôle requis.
+- Gestion des réponses selon le type de requête :
+  - Réponse JSON pour les requêtes API.
+  - Réponse HTML pour les pages web.
+- Configuration du nom de l'attribut de rôle de session :
+  - Récupération du nom de la variable contenant le rôle de l'utilisateur depuis le web.xml dans FrontControllerListener.
+  - Stockage de cette configuration dans le ServletContext pour la rendre accessible au FrontController.
+- Vérification des autorisations dans FrontController :
+  - Création de la fonction checkAuthorization pour vérifier les accès avant l'invocation de la méthode du contrôleur :
+    - Récupération de l'annotation Auth sur la méthode, puis sur la classe si elle est absente.
+    - Priorité à l'annotation de la méthode par rapport à celle de la classe.
+    - Vérification de l'existence de la session et de l'attribut contenant le rôle de l'utilisateur.
+    - Si le rôle requis est vide, autorisation de l'accès après authentification.
+    - Si un rôle est requis, vérification de sa présence dans l'attribut de session, qui peut contenir un rôle unique (String) ou plusieurs rôles (Collection).
+    - Appel de handleUnauthorized si l'utilisateur n'est pas authentifié.
+    - Appel de handleForbidden si l'utilisateur est authentifié, mais ne possède pas le rôle requis.
+  - Arrêt du traitement de la requête en cas de refus d'accès.
 
 ### Sprint 10-bis: connecter+ role specifique(1 ou plus)
 ex: connecte+role prof
     connecte+ role prof et directeur
+qlq part ity le anarana variable verifier-na (anaty web.xml) (alaina in1 iany, azo apetraka any am context)
+ato anatinito variable ito no asiana anle role
+refa metgode d'action ka misy role annotation, de lasa mijery oe misy anito variable ito ve le parametre
