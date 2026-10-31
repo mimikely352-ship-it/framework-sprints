@@ -108,62 +108,40 @@ public class FrontControllerServlet extends HttpServlet {
         
     }
     
-    public boolean checkAuthorization(HttpServletRequest request, HttpServletResponse response, Method method, Object controllerInstance, boolean isApi) throws IOException {
-    Auth auth = method.getAnnotation(Auth.class);
-    if (auth == null) {
-        auth = controllerInstance.getClass().getAnnotation(Auth.class);
-    }
-
-    if (auth == null) {
-        return true;
-    }
-
-    HttpSession session = request.getSession(false);
-    String authSessionKey = (String) getServletContext().getAttribute("authSessionKey");
-    String authRoleKey = (String) getServletContext().getAttribute("authRoleKey");
-
-    if (session == null || session.getAttribute(authSessionKey) == null) {
-        ResponseHelper.handleUnauthorized(request, response, isApi);
-        return false;
-    }
-
-    String[] requiredRoles = auth.role();
-    if (requiredRoles != null && requiredRoles.length > 0 && !requiredRoles[0].isEmpty()) {
-        Object userRolesObj = session.getAttribute(authRoleKey);
-        boolean hasRole = false;
-
-        if (userRolesObj != null) {
-            List<String> sessionRoles = new ArrayList<>();
-            if (userRolesObj instanceof String) {
-                sessionRoles.add(((String) userRolesObj).trim());
-            } else if (userRolesObj instanceof String[]) {
-                for (String r : (String[]) userRolesObj) {
-                    if (r != null) sessionRoles.add(r.trim());
-                }
-            } else if (userRolesObj instanceof java.util.Collection) {
-                for (Object r : (java.util.Collection<?>) userRolesObj) {
-                    if (r != null) sessionRoles.add(r.toString().trim());
-                }
-            }
-
-            for (String reqRole : requiredRoles) {
-                for (String sRole : sessionRoles) {
-                    if (sRole.equalsIgnoreCase(reqRole.trim())) {
-                        hasRole = true;
-                        break;
-                    }
-                }
-                if (hasRole) {
-                    break;
-                }
-            }
+    private boolean checkAuthorization(HttpServletRequest request, HttpServletResponse response, Method method, Object controllerInstance, boolean isApi) throws IOException {
+        Auth auth = method.getAnnotation(Auth.class);
+        if (auth == null) {
+            auth = controllerInstance.getClass().getAnnotation(Auth.class);
         }
 
-        if (!hasRole) {
-            ResponseHelper.handleForbidden(request, response, isApi);
+        if (auth == null) {
+            return true;
+        }
+
+        HttpSession session = request.getSession(false);
+        String sessionKey = (String) getServletContext().getAttribute("authSessionKey");
+        String roleKey = (String) getServletContext().getAttribute("authRoleKey");
+
+        if (session == null || session.getAttribute(sessionKey) == null) {
+            ResponseHelper.handleUnauthorized(request, response, isApi);
             return false;
         }
-    }
+
+        String requiredRole = auth.role();
+        if (requiredRole != null && !requiredRole.trim().isEmpty()) {
+            Object userRoleObj = session.getAttribute(roleKey);
+            
+            if (userRoleObj == null) {
+                ResponseHelper.handleForbidden(request, response, isApi);
+                return false;
+            }
+
+            String userRole = userRoleObj.toString().trim();
+            if (!userRole.equalsIgnoreCase(requiredRole.trim())) {
+                ResponseHelper.handleForbidden(request, response, isApi);
+                return false;
+            }
+        }
 
         return true;
     }
